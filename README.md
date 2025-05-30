@@ -26,6 +26,7 @@ A visually engaging sorting algorithm visualizer built with HTML, CSS, and JavaS
 
 ## 🛠️ Technologies Used
 
+
 - HTML5
 - CSS3 (with animation & gradient effects)
 - JavaScript (vanilla)
