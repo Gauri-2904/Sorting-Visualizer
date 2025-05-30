@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sorting Visualizer</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body class="light">
+    <div class="container">
+      <h1 class="flaming-text">Sorting Visualizer</h1>
+      <div id="controls">
+        <button onclick="generateArray()">Generate New Array</button>
+        <select id="algorithm">
+          <option value="bubble">Bubble Sort</option>
+          <option value="selection">Selection Sort</option>
+          <option value="insertion">Insertion Sort</option>
+          <option value="merge">Merge Sort</option>
+          <option value="quick">Quick Sort</option>
+          <option value="heap">Heap Sort</option>
+        </select>
+        <button onclick="startSort()">Start Sort</button>
+        <button onclick="nextStep()">Next Step</button>
+        <label><input type="checkbox" id="theme-toggle" /> Dark Mode</label>
+        <div>Comparisons: <span id="comparison-count">0</span></div>
+        <div>Swaps: <span id="swap-count">0</span></div>
+        <div>Time Taken: <span id="time">0</span> ms</div>
+      </div>
+      <div class="array-container" id="array-container"></div>
+      <div id="algo-info">
+        <h3>Algorithm Info</h3>
+        <p id="algo-description"></p>
+      </div>
+    </div>
+    <script>
+      let comparisons = 0, swaps = 0, currentStep = 0, sortSteps = [];
+      const arrayContainer = document.getElementById("array-container");
+      const algorithmDescriptions = {
+        bubble: "Bubble Sort: O(n²) average/worst, stable.",
+        selection: "Selection Sort: O(n²), not stable.",
+        insertion: "Insertion Sort: O(n²) worst, O(n) best, stable.",
+        merge: "Merge Sort: O(n log n), stable.",
+        quick: "Quick Sort: O(n log n) average, O(n²) worst, not stable.",
+        heap: "Heap Sort: O(n log n), not stable."
+      };
+
+      function generateArray() {
+        comparisons = swaps = currentStep = 0;
+        updateCounters();
+        sortSteps = [];
+        arrayContainer.innerHTML = "";
+        for (let i = 0; i < 30; i++) {
+          const barHeight = Math.floor(Math.random() * 80) + 20;
+          const arrayBar = document.createElement("div");
+          arrayBar.classList.add("array-bar");
+          arrayBar.style.height = `${barHeight}%`;
+          arrayContainer.appendChild(arrayBar);
+        }
+        updateAlgorithmInfo();
+      }
+
+      function updateAlgorithmInfo() {
+        const algo = document.getElementById("algorithm").value;
+        document.getElementById("algo-description").textContent = algorithmDescriptions[algo];
+      }
+
+      function recordStep(i, j, shouldSwap) {
+        sortSteps.push({ i, j, shouldSwap });
+      }
+
+      function updateCounters() {
+        document.getElementById("comparison-count").textContent = comparisons;
+        document.getElementById("swap-count").textContent = swaps;
+      }
+
+      function nextStep() {
+        if (currentStep >= sortSteps.length) return;
+        const { i, j, shouldSwap } = sortSteps[currentStep++];
+        const bars = document.querySelectorAll(".array-bar");
+        comparisons++;
+        bars[i].style.backgroundColor = "#ff6f61";
+        bars[j].style.backgroundColor = "#ff6f61";
+        if (shouldSwap) {
+          swaps++;
+          swap(bars[i], bars[j]);
+          playSound();
+        }
+        updateCounters();
+      }
+
+      function startSort() {
+        let start = performance.now();
+        const algo = document.getElementById("algorithm").value;
+        if (algo === "bubble") bubbleSortSteps();
+        else if (algo === "selection") selectionSortSteps();
+        else if (algo === "insertion") insertionSortSteps();
+        else if (algo === "merge") mergeSortSteps();
+        else if (algo === "quick") quickSortSteps();
+        else if (algo === "heap") heapSortSteps();
+        let end = performance.now();
+        document.getElementById("time").textContent = (end - start).toFixed(2);
+      }
+
+      function bubbleSortSteps() {
+        const bars = document.querySelectorAll(".array-bar");
+        for (let i = 0; i < bars.length; i++) {
+          for (let j = 0; j < bars.length - i - 1; j++) {
+            const height1 = parseInt(bars[j].style.height);
+            const height2 = parseInt(bars[j + 1].style.height);
+            recordStep(j, j + 1, height1 > height2);
+          }
+        }
+      }
+
+      function selectionSortSteps() {
+        const bars = document.querySelectorAll(".array-bar");
+        for (let i = 0; i < bars.length; i++) {
+          let minIdx = i;
+          for (let j = i + 1; j < bars.length; j++) {
+            const height1 = parseInt(bars[minIdx].style.height);
+            const height2 = parseInt(bars[j].style.height);
+            recordStep(minIdx, j, height2 < height1);
+            if (height2 < height1) minIdx = j;
+          }
+          if (minIdx !== i) recordStep(i, minIdx, true);
+        }
+      }
+
+      function insertionSortSteps() {
+        const bars = document.querySelectorAll(".array-bar");
+        for (let i = 1; i < bars.length; i++) {
+          let j = i;
+          while (j > 0 && parseInt(bars[j - 1].style.height) > parseInt(bars[j].style.height)) {
+            recordStep(j, j - 1, true);
+            j--;
+          }
+        }
+      }
+
+      function mergeSortSteps() {
+        const bars = document.querySelectorAll(".array-bar");
+        const heights = Array.from(bars).map(bar => parseInt(bar.style.height));
+
+        function merge(arr, l, m, r) {
+          let left = arr.slice(l, m + 1);
+          let right = arr.slice(m + 1, r + 1);
+          let i = 0, j = 0, k = l;
+
+          while (i < left.length && j < right.length) {
+            recordStep(k, k, false);
+            if (left[i] <= right[j]) arr[k++] = left[i++];
+            else arr[k++] = right[j++];
+          }
+          while (i < left.length) arr[k++] = left[i++];
+          while (j < right.length) arr[k++] = right[j++];
+        }
+
+        function mergeSort(arr, l, r) {
+          if (l >= r) return;
+          const m = Math.floor((l + r) / 2);
+          mergeSort(arr, l, m);
+          mergeSort(arr, m + 1, r);
+          merge(arr, l, m, r);
+        }
+
+        mergeSort(heights, 0, heights.length - 1);
+      }
+
+      function quickSortSteps() {
+        const bars = document.querySelectorAll(".array-bar");
+        const arr = Array.from(bars).map(bar => parseInt(bar.style.height));
+
+        function partition(arr, low, high) {
+          let pivot = arr[high], i = low - 1;
+          for (let j = low; j < high; j++) {
+            recordStep(j, high, arr[j] < pivot);
+            if (arr[j] < pivot) {
+              i++;
+              [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+          }
+          [arr[i + 1], arr[high]] = [arr[high], arr[i + 1]];
+          return i + 1;
+        }
+
+        function quickSort(arr, low, high) {
+          if (low < high) {
+            let pi = partition(arr, low, high);
+            quickSort(arr, low, pi - 1);
+            quickSort(arr, pi + 1, high);
+          }
+        }
+
+        quickSort(arr, 0, arr.length - 1);
+      }
+
+      function heapSortSteps() {
+        const bars = document.querySelectorAll(".array-bar");
+        const arr = Array.from(bars).map(bar => parseInt(bar.style.height));
+
+        function heapify(n, i) {
+          let largest = i, l = 2 * i + 1, r = 2 * i + 2;
+          if (l < n && arr[l] > arr[largest]) largest = l;
+          if (r < n && arr[r] > arr[largest]) largest = r;
+          if (largest !== i) {
+            recordStep(i, largest, true);
+            [arr[i], arr[largest]] = [arr[largest], arr[i]];
+            heapify(n, largest);
+          }
+        }
+
+        let n = arr.length;
+        for (let i = Math.floor(n / 2) - 1; i >= 0; i--) heapify(n, i);
+        for (let i = n - 1; i > 0; i--) {
+          recordStep(0, i, true);
+          [arr[0], arr[i]] = [arr[i], arr[0]];
+          heapify(i, 0);
+        }
+      }
+
+      function swap(bar1, bar2) {
+        let temp = bar1.style.height;
+        bar1.style.height = bar2.style.height;
+        bar2.style.height = temp;
+      }
+
+      function playSound() {
+        const audio = new Audio("https://www.soundjay.com/button/sounds/button-16.mp3");
+        audio.play();
+      }
+
+      document.getElementById("theme-toggle").addEventListener("change", (e) => {
+        document.body.classList.toggle("dark", e.target.checked);
+        document.body.classList.toggle("light", !e.target.checked);
+      });
+
+      document.getElementById("algorithm").addEventListener("change", updateAlgorithmInfo);
+
+      generateArray();
+    </script>
+  </body>
+</html>
